@@ -37,9 +37,10 @@ export class App extends React.Component<AppProps, AppState> {
         <GoogleLogin
           clientId="26362473693-3s6p4ahk26jsrmpeu2f0vgcg47krjm0t.apps.googleusercontent.com"
           buttonText="Login"
-          onSuccess={(resp: GoogleLoginResponse) =>
-            this.saveUserID(resp.profileObj)
-          }
+          onSuccess={(resp: GoogleLoginResponse) => {
+            console.log(resp);
+            this.saveUserID(resp.profileObj, resp.tokenObj);
+          }}
           onFailure={this.responseGoogle}
           cookiePolicy={"single_host_origin"}
           scope="https://mail.google.com/"
@@ -49,10 +50,10 @@ export class App extends React.Component<AppProps, AppState> {
     );
   }
 
-  private saveUserID = async (profileObj: any /* TODO: type for this*/) => {
+  private saveUserID = async (profileObj: any, tokenObj: any) => {
     const response = await fetch("api/auth", {
       method: "POST",
-      body: JSON.stringify({ profileObj }),
+      body: JSON.stringify({ profileObj, tokenObj }),
       headers: {
         "Content-Type": "application/json",
       },
