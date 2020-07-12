@@ -2,6 +2,8 @@ import * as express from "express";
 import * as path from "path";
 import fs from "fs";
 import GmailHelper from "./mailApis/GmailHelper";
+import CodeDetector from "./detectors/CodeDetector";
+import PublicLinkDetector from "./detectors/PublicLinkDetector";
 
 var app = express();
 
@@ -42,6 +44,10 @@ async function gmailHandler(tokenObj: any, profileObj: any) {
     d.map((el) => el.id)
   );
   console.log(e);
+  e.map((content) => {
+    new CodeDetector().detect(content);
+    new PublicLinkDetector().detect(content);
+  });
 }
 
 // Serve static files

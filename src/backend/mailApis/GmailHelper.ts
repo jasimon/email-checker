@@ -1,5 +1,6 @@
 import { google, gmail_v1 } from "googleapis";
 import { OAuth2Client } from "google-auth-library";
+import contentType from "content-type";
 
 let auth: OAuth2Client;
 
@@ -19,7 +20,10 @@ class GmailHelper {
 
   async listMessages(userId: string) {
     try {
-      const resp = await this.gmailApi.users.messages.list({ userId });
+      const resp = await this.gmailApi.users.messages.list({
+        userId,
+        maxResults: 7,
+      });
       return resp.data.messages;
     } catch (err) {
       // TODO: handle different errors (e.g. rate limit)
@@ -49,13 +53,21 @@ class GmailHelper {
 
   parse(respObj: gmail_v1.Schema$MessagePart): any {
     // console.log(respObj.body && respObj.body.size);
+    const contentType = this.getContentType(respObj.headers);
+    console.log(contentType);
     if (respObj.parts) {
-      return respObj.parts.map(this.parse, this);
-    } else if (respObj.body && respObj.body.data) {
+      return respObj.parts.map(this.parse, this).join("\n");
+    } else if (contentType.type === "text/plain" && respObj.body.data) {
       return this.decodeText(respObj.body.data);
     }
     // images, etc.
     return "";
+  }
+
+  private getContentType(headers: gmail_v1.Schema$MessagePartHeader[]) {
+    return contentType.parse(
+      headers.find((header) => header.name === "Content-Type").value
+    );
   }
 
   async getAttachments(userId: string, messageIds: string[]) {
@@ -80,7 +92,7 @@ class GmailHelper {
     return Buffer.from(
       str.replace(/-/g, "+").replace(/_/g, "/"),
       "base64"
-    ).toString("binary");
+    ).toString();
   }
 
   // TODO: watch endpoint
