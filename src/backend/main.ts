@@ -1,39 +1,84 @@
 import * as express from "express";
 import * as path from "path";
-import fs from "fs";
+import dotenv from "dotenv";
+import { google } from "googleapis";
+import expressSession from "express-session";
+import cookieParser from "cookie-parser";
 import GmailHelper from "./mailApis/GmailHelper";
 import CodeDetector from "./detectors/CodeDetector";
 import PublicLinkDetector from "./detectors/PublicLinkDetector";
+import User from "./models/user";
+
+dotenv.config();
 
 var app = express();
 
-fs.readFile(process.env.GOOGLE_CREDENTIALS_FILE, (err, content) => {
-  if (err) {
-    throw Error(`unable to read google credentials, recieved error: ${err}`);
-  }
-  const { client_id: clientId, client_secret: clientSecret } = JSON.parse(
-    content.toString()
-  ).web;
-  GmailHelper.init(clientId, clientSecret);
-});
+GmailHelper.init(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
+);
+
+const redirectUri = "http://localhost:8000";
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  redirectUri
+);
 
 app.use(express.json());
+app.use(cookieParser());
 let profileObj;
 let tokenObj;
 
-// Simple endpoint that returns the current time
-app.get("/api/time", function (req, res) {
-  res.send(new Date().toISOString());
+app.use(
+  expressSession({
+    name: "user_sid",
+    secret: process.env.SESSION_SECRET,
+    resave: true,
+    saveUninitialized: true,
+  })
+);
+
+app.use((req, res, next) => {
+  if (req.cookies.user_sid && !req.session.user) {
+    res.clearCookie("user_sid");
+  }
+  next();
 });
 
-app.post("/api/auth", function (req, res) {
-  // just store in memory for now
-  profileObj = req.body.profileObj;
-  tokenObj = req.body.tokenObj;
-  console.log(tokenObj);
-  gmailHandler(tokenObj, profileObj);
+app.post("/api/auth", async function (req, res) {
+  try {
+    const { tokens } = await oauth2Client.getToken(req.body.code);
+    const ticket = await oauth2Client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const {
+      sub,
+      email,
+      given_name: givenName,
+      family_name: familyName,
+    } = ticket.getPayload();
+    const [user /*, created*/] = await User.findOrCreate({
+      where: { email },
+      defaults: {
+        firstName: givenName,
+        lastName: familyName,
+        externalId: sub,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      },
+    });
+    req.session.user = user.toJSON();
+    // if (created) {
+    //   // trigger initial storage
+    // }
+  } catch (err) {
+    console.error(err);
+  }
+  false && gmailHandler(tokenObj, profileObj);
   // eventually this will be some sort of user model
-  res.send(profileObj);
+  // res.send(profileObj);
 });
 
 async function gmailHandler(tokenObj: any, profileObj: any) {

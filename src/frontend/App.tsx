@@ -1,6 +1,6 @@
 import * as React from "react";
 import { render } from "react-dom";
-import { GoogleLogin, GoogleLoginResponse } from "react-google-login";
+import { GoogleLogin, GoogleLoginResponseOffline } from "react-google-login";
 
 interface AppProps {
   name: string;
@@ -18,12 +18,7 @@ export class App extends React.Component<AppProps, AppState> {
     };
   }
 
-  componentDidMount() {
-    this.getTime();
-    setTimeout(this.getTime, 2000);
-  }
-
-  responseGoogle = (response: GoogleLoginResponse) => {
+  responseGoogle = (response: GoogleLoginResponseOffline) => {
     console.log(response);
   };
 
@@ -37,36 +32,30 @@ export class App extends React.Component<AppProps, AppState> {
         <GoogleLogin
           clientId="26362473693-3s6p4ahk26jsrmpeu2f0vgcg47krjm0t.apps.googleusercontent.com"
           buttonText="Login"
-          onSuccess={(resp: GoogleLoginResponse) => {
+          onSuccess={(resp: GoogleLoginResponseOffline) => {
             console.log(resp);
-            this.saveUserID(resp.profileObj, resp.tokenObj);
+            this.saveUserID(resp.code);
           }}
           onFailure={this.responseGoogle}
           cookiePolicy={"single_host_origin"}
-          scope="https://mail.google.com/"
+          scope="profile email https://mail.google.com/"
+          prompt="consent"
+          responseType="code"
         />
-        ,
       </>
     );
   }
 
-  private saveUserID = async (profileObj: any, tokenObj: any) => {
-    const response = await fetch("api/auth", {
+  private saveUserID = async (code: string) => {
+    const response = await fetch("api/auth/", {
       method: "POST",
-      body: JSON.stringify({ profileObj, tokenObj }),
+      body: JSON.stringify({ code }),
       headers: {
         "Content-Type": "application/json",
       },
     });
     if (response.ok) {
       console.log("success");
-    }
-  };
-
-  private getTime = async () => {
-    const response = await fetch("/api/test", { method: "GET" });
-    if (response.ok) {
-      this.setState({ time: await response.text() });
     }
   };
 }
