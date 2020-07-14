@@ -46,6 +46,10 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/api/user/status", async function (req, res) {
+  console.log(req.session.user);
+});
+
 app.post("/api/auth", async function (req, res) {
   try {
     const { tokens } = await oauth2Client.getToken(req.body.code);
@@ -69,10 +73,11 @@ app.post("/api/auth", async function (req, res) {
         refreshToken: tokens.refresh_token,
       },
     });
-    req.session.user = user.toJSON();
+    req.session.user = { id: user.getDataValue("id") };
     // if (created) {
     //   // trigger initial storage
     // }
+    res.send({ id: user.getDataValue("id") });
   } catch (err) {
     console.error(err);
   }
