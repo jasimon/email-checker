@@ -6,26 +6,34 @@ let auth: OAuth2Client;
 
 class GmailHelper {
   private gmailApi: gmail_v1.Gmail;
+  private externalId: string;
   static init(clientId: string, clientSecret: string) {
     auth = new google.auth.OAuth2(clientId, clientSecret);
   }
 
-  constructor(access_token: string, refresh_token: string) {
+  constructor(accessToken: string, refreshToken: string, externalId: string) {
     if (auth == null) {
       throw Error("Must initialize GmailHelper before using the api");
     }
-    auth.setCredentials({ access_token, refresh_token });
+    this.externalId = externalId;
+    auth.setCredentials({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
 
-    console.log(refresh_token);
+    this.refreshAccessToken();
     this.gmailApi = google.gmail({ version: "v1", auth });
+  }
+
+  async refreshAccessToken() {
+    // TODO: save this back to the user, only do when the token is expired
+    await auth.getAccessToken();
   }
 
   async listMessages(userId: string) {
     const messages = [];
     let nextPageToken = "";
     // NOTE: may need to make this a generator if there are too many messages to fit in memory
-    // TODO: save this back to the user, only do when the token is expired
-    await auth.getAccessToken();
     try {
       do {
         const resp = await this.gmailApi.users.messages.list({
@@ -65,6 +73,36 @@ class GmailHelper {
     );
   }
 
+  async subscribeToUpdates(userId: string) {
+    try {
+      const resp = await this.gmailApi.users.watch(
+        { userId },
+        {
+          body: JSON.stringify({
+            topicName: "projects/quickstart-1593887386655/topics/mail-sync",
+          }),
+        }
+      );
+      console.log(resp);
+    } catch (err) {
+      console.dir(err);
+      throw err;
+    }
+  }
+
+  async getPartial(historyId: string) {
+    console.log("in get partial");
+    const resp = await this.gmailApi.users.history.list({
+      startHistoryId: historyId,
+      userId: this.externalId,
+    });
+    console.log(resp.data);
+    console.log(
+      resp.data.history[0].messages,
+      resp.data.history[0].messagesAdded
+    );
+  }
+
   parse(respObj: gmail_v1.Schema$MessagePart): any {
     // console.log(respObj.body && respObj.body.size);
     const contentType = this.getContentType(respObj.headers);
@@ -72,7 +110,7 @@ class GmailHelper {
     if (respObj.parts) {
       return respObj.parts.map(this.parse, this).join("\n");
     } else if (contentType.type === "text/plain" && respObj.body.data) {
-      return this.decodeText(respObj.body.data);
+      return GmailHelper.decodeText(respObj.body.data);
     }
     // images, etc.
     return "";
@@ -101,7 +139,7 @@ class GmailHelper {
     );
   }
 
-  private decodeText(str: string) {
+  static decodeText(str: string) {
     // need to handle this specially because Google uses non-standard characters in their base 64 encoding
     return Buffer.from(
       str.replace(/-/g, "+").replace(/_/g, "/"),

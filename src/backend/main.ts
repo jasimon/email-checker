@@ -47,7 +47,28 @@ app.use((req, res, next) => {
 app.get("/api/user/status", async function (req, res) {
   console.log(req.session.user);
   const user = await User.findOne({ where: { id: 1 || req.session.user.id } });
-  gmailHandler(user);
+  // gmailHandler(user);
+  historyHelper(user);
+});
+
+app.post("/webhooks/gmail_messages", async function (req, res) {
+  const { data } = req.body.message;
+  console.log(data);
+  console.log(GmailHelper.decodeText(data));
+  const { historyId, emailAddress: email } = JSON.parse(
+    GmailHelper.decodeText(data)
+  );
+  const user = await User.findOne({ where: { email } });
+
+  const helper = new GmailHelper(
+    user.getDataValue("accessToken"),
+    user.getDataValue("refreshToken"),
+    user.getDataValue("externalId")
+  );
+
+  helper.getPartial(historyId);
+
+  res.sendStatus(200);
 });
 
 app.post("/api/auth", async function (req, res) {
@@ -86,11 +107,23 @@ app.post("/api/auth", async function (req, res) {
   // res.send(profileObj);
 });
 
+async function historyHelper(user: User) {
+  const helper = new GmailHelper(
+    user.getDataValue("accessToken"),
+    user.getDataValue("refreshToken"),
+    user.getDataValue("externalId")
+  );
+
+  helper.getPartial("3052");
+}
+
 async function gmailHandler(user: User) {
   const helper = new GmailHelper(
     user.getDataValue("accessToken"),
-    user.getDataValue("refreshToken")
+    user.getDataValue("refreshToken"),
+    user.getDataValue("externalId")
   );
+  await helper.subscribeToUpdates(user.getDataValue("externalId"));
   const d = await helper.listMessages(user.getDataValue("externalId"));
   const e = await helper.getMessageBody(
     user.getDataValue("externalId"),
