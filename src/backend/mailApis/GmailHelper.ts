@@ -10,21 +10,35 @@ class GmailHelper {
     auth = new google.auth.OAuth2(clientId, clientSecret);
   }
 
-  constructor(access_token: string) {
+  constructor(access_token: string, refresh_token: string) {
     if (auth == null) {
       throw Error("Must initialize GmailHelper before using the api");
     }
-    auth.setCredentials({ access_token });
+    auth.setCredentials({ access_token, refresh_token });
+
+    console.log(refresh_token);
     this.gmailApi = google.gmail({ version: "v1", auth });
   }
 
   async listMessages(userId: string) {
+    const messages = [];
+    let nextPageToken = "";
+    // NOTE: may need to make this a generator if there are too many messages to fit in memory
+    // TODO: save this back to the user, only do when the token is expired
+    await auth.getAccessToken();
     try {
-      const resp = await this.gmailApi.users.messages.list({
-        userId,
-        maxResults: 7,
-      });
-      return resp.data.messages;
+      do {
+        const resp = await this.gmailApi.users.messages.list({
+          userId,
+          maxResults: 5,
+          pageToken: nextPageToken,
+        });
+        // When there are no messages for some reason there is no messages prop vs empty array
+        resp.data.messages && messages.push(...resp.data.messages);
+        nextPageToken = resp.data.nextPageToken;
+      } while (nextPageToken != null);
+
+      return messages;
     } catch (err) {
       // TODO: handle different errors (e.g. rate limit)
       console.log(err);

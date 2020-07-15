@@ -1,13 +1,20 @@
 import { highlightAuto } from "highlight.js";
-class CodeDetector {
+import BaseDetector from "./BaseDetector";
+
+class CodeDetector extends BaseDetector {
   public readonly version: number = 1;
 
-  public detect(content: string) {
+  public async detect(content: string) {
     console.log(content);
     const { language, relevance } = highlightAuto(content);
-    console.log(language, relevance);
+    console.log(
+      language,
+      relevance,
+      content.length,
+      relevance / content.length
+    );
     // based on some very hand wavy calculations
-    return relevance < 20;
+    return relevance / content.length;
   }
 }
 

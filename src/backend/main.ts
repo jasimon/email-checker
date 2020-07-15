@@ -27,8 +27,6 @@ const oauth2Client = new google.auth.OAuth2(
 
 app.use(express.json());
 app.use(cookieParser());
-let profileObj;
-let tokenObj;
 
 app.use(
   expressSession({
@@ -48,6 +46,8 @@ app.use((req, res, next) => {
 
 app.get("/api/user/status", async function (req, res) {
   console.log(req.session.user);
+  const user = await User.findOne({ where: { id: 1 || req.session.user.id } });
+  gmailHandler(user);
 });
 
 app.post("/api/auth", async function (req, res) {
@@ -77,27 +77,42 @@ app.post("/api/auth", async function (req, res) {
     // if (created) {
     //   // trigger initial storage
     // }
+    gmailHandler(user);
     res.send({ id: user.getDataValue("id") });
   } catch (err) {
     console.error(err);
   }
-  false && gmailHandler(tokenObj, profileObj);
   // eventually this will be some sort of user model
   // res.send(profileObj);
 });
 
-async function gmailHandler(tokenObj: any, profileObj: any) {
-  const helper = new GmailHelper(tokenObj.access_token);
-  const d = await helper.listMessages(profileObj.googleId);
+async function gmailHandler(user: User) {
+  const helper = new GmailHelper(
+    user.getDataValue("accessToken"),
+    user.getDataValue("refreshToken")
+  );
+  const d = await helper.listMessages(user.getDataValue("externalId"));
   const e = await helper.getMessageBody(
-    profileObj.googleId,
+    user.getDataValue("externalId"),
     d.map((el) => el.id)
   );
   console.log(e);
-  e.map((content) => {
-    new CodeDetector().detect(content);
-    new PublicLinkDetector().detect(content);
-  });
+  const linkResults = await Promise.all(
+    e.map((content) => new PublicLinkDetector().detect(content))
+  );
+  const codeResults = await Promise.all(
+    e.map((content) => new CodeDetector().detect(content))
+  );
+  console.log(
+    `public link check: ${linkResults.filter((x) => x > 0.8).length} out of ${
+      linkResults.length
+    } failed`
+  );
+  console.log(
+    `code check: ${codeResults.filter((x) => x > 0.8).length} out of ${
+      codeResults.length
+    } failed`
+  );
 }
 
 // Serve static files
