@@ -1,8 +1,11 @@
 import { google, gmail_v1 } from "googleapis";
 import { OAuth2Client } from "google-auth-library";
 import contentType from "content-type";
+import { sleep } from "../helpers";
 
 let auth: OAuth2Client;
+
+const MAX_REQUESTS = 5;
 
 class GmailHelper {
   private gmailApi: gmail_v1.Gmail;
@@ -27,7 +30,12 @@ class GmailHelper {
 
   async refreshAccessToken() {
     // TODO: save this back to the user, only do when the token is expired
-    await auth.getAccessToken();
+    try {
+      await auth.getAccessToken();
+    } catch (err) {
+      // swallow for now
+      console.error(err);
+    }
   }
 
   async listMessages(userId: string) {
@@ -36,11 +44,13 @@ class GmailHelper {
     // NOTE: may need to make this a generator if there are too many messages to fit in memory
     try {
       do {
-        const resp = await this.gmailApi.users.messages.list({
-          userId,
-          maxResults: 5,
-          pageToken: nextPageToken,
-        });
+        const resp = await this.makeRequest(() =>
+          this.gmailApi.users.messages.list({
+            userId,
+            maxResults: 5,
+            pageToken: nextPageToken,
+          })
+        );
         // When there are no messages for some reason there is no messages prop vs empty array
         resp.data.messages && messages.push(...resp.data.messages);
         nextPageToken = resp.data.nextPageToken;
@@ -54,15 +64,37 @@ class GmailHelper {
     }
   }
 
+  private async makeRequest<T>(
+    requestFn: () => Promise<T>,
+    count = 1
+  ): Promise<T> {
+    try {
+      const resp = await requestFn();
+      return resp;
+    } catch (err) {
+      console.log(err);
+      if (count > MAX_REQUESTS) {
+        throw err;
+      }
+      const seconds = Math.pow(3, count);
+      // adding a random offset to the backoff to avoid a thundering herd-like problem
+      const randomOffset = count * (Math.floor(Math.random() * 1000) - 500);
+      await sleep(seconds * 1000 + randomOffset);
+      return await this.makeRequest(requestFn, count++);
+    }
+  }
+
   async getMessageBody(messageIds: string[]) {
     //   For now just iterate since node library doesn't support batching, can add that in later
     return await Promise.all(
       messageIds.map(async (messageId) => {
         try {
-          const resp = await this.gmailApi.users.messages.get({
-            userId: this.externalId,
-            id: messageId,
-          });
+          const resp = await this.makeRequest(() =>
+            this.gmailApi.users.messages.get({
+              userId: this.externalId,
+              id: messageId,
+            })
+          );
           const body = this.parse(resp.data.payload);
           return body;
         } catch (err) {

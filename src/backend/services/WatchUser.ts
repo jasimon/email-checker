@@ -12,7 +12,7 @@ class WatchUser {
     const { historyId, expiration } = await helper.subscribeToUpdates();
     user.lastHistoryId = historyId;
     user.watchExpiration = expiration;
-    user.save();
+    return await user.save();
   }
 }
 

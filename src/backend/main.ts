@@ -7,7 +7,12 @@ import cookieParser from "cookie-parser";
 import GmailHelper from "./mailApis/GmailHelper";
 import User from "./models/user";
 import FullMailSync from "./services/FullMailSync";
-import ScanUnscannedMail from "./services/ScanUnscannedMail";
+import PartialMailSync from "./services/PartialMailSync";
+import Email from "./models/email";
+import Scan from "./models/scan";
+import { Op } from "sequelize";
+import { ALL_DETECTORS } from "./detectors";
+import WatchUser from "./services/watchUser";
 
 dotenv.config();
 
@@ -18,11 +23,10 @@ GmailHelper.init(
   process.env.GOOGLE_CLIENT_SECRET
 );
 
-const redirectUri = "http://localhost:8000";
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  redirectUri
+  process.env.GOOGLE_REDIRECT_URI
 );
 
 app.use(express.json());
@@ -45,29 +49,45 @@ app.use((req, res, next) => {
 });
 
 app.get("/api/user/status", async function (req, res) {
-  console.log(req.session.user);
-  // const user = await User.findOne({ where: { id: 1 || req.session.user.id } });
-  // gmailHandler(user);
-  // historyHelper(user);
-  new ScanUnscannedMail().call(1);
+  // const { id } = req.session.user.id;
+  const id = 1;
+  const emailIds = (
+    await Email.findAll({
+      where: { userId: id },
+      attributes: ["id"],
+    })
+  ).map((email) => email.id);
+  const resp = await ALL_DETECTORS.reduce(async (acc, Detector) => {
+    const resolvedAcc = await acc;
+    const totalScans = await Scan.count({
+      where: {
+        emailId: { [Op.in]: emailIds },
+        scanType: Detector.scanType,
+      },
+    });
+    const failedScans = await Scan.count({
+      where: {
+        emailId: { [Op.in]: emailIds },
+        scanType: Detector.scanType,
+        result: { [Op.gt]: 0.8 },
+      },
+    });
+    resolvedAcc[Detector.scanType] = { totalScans, failedScans };
+    return Promise.resolve(resolvedAcc);
+  }, Promise.resolve({}));
+  const lastScan: Date = await Scan.max("createdAt", {
+    where: { emailId: { [Op.in]: emailIds } },
+  });
+  res.set("etag", lastScan.getTime().toString());
+  res.send({ ...resp, emailCount: emailIds.length });
 });
 
 app.post("/webhooks/gmail_messages", async function (req, res) {
   const { data } = req.body.message;
-  console.log(data);
-  console.log(GmailHelper.decodeText(data));
   const { historyId, emailAddress: email } = JSON.parse(
     GmailHelper.decodeText(data)
   );
-  const user = await User.findOne({ where: { email } });
-
-  const helper = new GmailHelper(
-    user.getDataValue("accessToken"),
-    user.getDataValue("refreshToken"),
-    user.getDataValue("externalId")
-  );
-
-  helper.getPartial(historyId);
+  new PartialMailSync().call(email, historyId);
 
   res.sendStatus(200);
 });
@@ -85,7 +105,7 @@ app.post("/api/auth", async function (req, res) {
       given_name: givenName,
       family_name: familyName,
     } = ticket.getPayload();
-    const [user /*, created*/] = await User.findOrCreate({
+    const [user, created] = await User.findOrCreate({
       where: { email },
       defaults: {
         firstName: givenName,
@@ -96,27 +116,17 @@ app.post("/api/auth", async function (req, res) {
       },
     });
     req.session.user = { id: user.id };
-    // if (created) {
-    //   // trigger initial storage
-    // }
-    new FullMailSync().call(user.id);
+    if (created) {
+      // trigger initial storage
+      // wait on the watch so we don't miss any emails
+      await new WatchUser().call(user.id);
+      new FullMailSync().call(user.id);
+    }
     res.send({ id: user.id });
   } catch (err) {
     console.error(err);
   }
-  // eventually this will be some sort of user model
-  // res.send(profileObj);
 });
-
-// async function historyHelper(user: User) {
-//   const helper = new GmailHelper(
-//     user.getDataValue("accessToken"),
-//     user.getDataValue("refreshToken"),
-//     user.getDataValue("externalId")
-//   );
-
-//   helper.getPartial("3052");
-// }
 
 // Serve static files
 app.use("/", express.static(path.join(__dirname, "/www")));
