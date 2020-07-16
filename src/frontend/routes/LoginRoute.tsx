@@ -33,6 +33,7 @@ const LoginRoute = () => {
       cookiePolicy={"single_host_origin"}
       scope="profile email https://mail.google.com/"
       responseType="code"
+      prompt="consent"
     />
   );
 };

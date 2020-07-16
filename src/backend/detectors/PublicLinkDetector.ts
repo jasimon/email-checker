@@ -5,7 +5,8 @@ const DOCS_REGEX = /https?:\/\/docs.google.com[^\s]*/g;
 const PAPER_REGEX = /https?:\/\/paper.dropbox.com[^\s]*/g;
 
 class PublicLinkDetector extends BaseDetector {
-  public readonly version: number = 1;
+  public static readonly version: number = 1;
+  public static readonly scanType: string = "PublicLinkDetector";
   public async detect(content: string) {
     // 1. find all docs links
     // keeping separate for now since we may want to handle differently based on http response codes

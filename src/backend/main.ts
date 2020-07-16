@@ -5,9 +5,9 @@ import { google } from "googleapis";
 import expressSession from "express-session";
 import cookieParser from "cookie-parser";
 import GmailHelper from "./mailApis/GmailHelper";
-import CodeDetector from "./detectors/CodeDetector";
-import PublicLinkDetector from "./detectors/PublicLinkDetector";
 import User from "./models/user";
+import FullMailSync from "./services/FullMailSync";
+import ScanUnscannedMail from "./services/ScanUnscannedMail";
 
 dotenv.config();
 
@@ -46,9 +46,10 @@ app.use((req, res, next) => {
 
 app.get("/api/user/status", async function (req, res) {
   console.log(req.session.user);
-  const user = await User.findOne({ where: { id: 1 || req.session.user.id } });
+  // const user = await User.findOne({ where: { id: 1 || req.session.user.id } });
   // gmailHandler(user);
-  historyHelper(user);
+  // historyHelper(user);
+  new ScanUnscannedMail().call(1);
 });
 
 app.post("/webhooks/gmail_messages", async function (req, res) {
@@ -94,12 +95,12 @@ app.post("/api/auth", async function (req, res) {
         refreshToken: tokens.refresh_token,
       },
     });
-    req.session.user = { id: user.getDataValue("id") };
+    req.session.user = { id: user.id };
     // if (created) {
     //   // trigger initial storage
     // }
-    gmailHandler(user);
-    res.send({ id: user.getDataValue("id") });
+    new FullMailSync().call(user.id);
+    res.send({ id: user.id });
   } catch (err) {
     console.error(err);
   }
@@ -107,46 +108,15 @@ app.post("/api/auth", async function (req, res) {
   // res.send(profileObj);
 });
 
-async function historyHelper(user: User) {
-  const helper = new GmailHelper(
-    user.getDataValue("accessToken"),
-    user.getDataValue("refreshToken"),
-    user.getDataValue("externalId")
-  );
+// async function historyHelper(user: User) {
+//   const helper = new GmailHelper(
+//     user.getDataValue("accessToken"),
+//     user.getDataValue("refreshToken"),
+//     user.getDataValue("externalId")
+//   );
 
-  helper.getPartial("3052");
-}
-
-async function gmailHandler(user: User) {
-  const helper = new GmailHelper(
-    user.getDataValue("accessToken"),
-    user.getDataValue("refreshToken"),
-    user.getDataValue("externalId")
-  );
-  await helper.subscribeToUpdates(user.getDataValue("externalId"));
-  const d = await helper.listMessages(user.getDataValue("externalId"));
-  const e = await helper.getMessageBody(
-    user.getDataValue("externalId"),
-    d.map((el) => el.id)
-  );
-  console.log(e);
-  const linkResults = await Promise.all(
-    e.map((content) => new PublicLinkDetector().detect(content))
-  );
-  const codeResults = await Promise.all(
-    e.map((content) => new CodeDetector().detect(content))
-  );
-  console.log(
-    `public link check: ${linkResults.filter((x) => x > 0.8).length} out of ${
-      linkResults.length
-    } failed`
-  );
-  console.log(
-    `code check: ${codeResults.filter((x) => x > 0.8).length} out of ${
-      codeResults.length
-    } failed`
-  );
-}
+//   helper.getPartial("3052");
+// }
 
 // Serve static files
 app.use("/", express.static(path.join(__dirname, "/www")));

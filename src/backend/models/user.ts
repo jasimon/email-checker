@@ -2,6 +2,16 @@ import { Model, DataTypes } from "sequelize";
 import { getSequelize } from "./helpers";
 const sequelize = getSequelize();
 export default class User extends Model {
+  id!: number;
+  firstName: string;
+  lastName: string;
+  email!: string;
+  externalId!: string;
+  accessToken!: string;
+  refreshToken!: string;
+  lastHistoryId: string;
+  watchExpiration: string;
+
   /**
    * Helper method for defining associations.
    * This method is not a part of Sequelize lifecycle.
@@ -19,9 +29,11 @@ User.init(
     externalId: { type: DataTypes.STRING, allowNull: false },
     accessToken: { type: DataTypes.STRING, allowNull: false },
     refreshToken: { type: DataTypes.STRING, allowNull: false },
+    lastHistoryId: DataTypes.STRING,
+    watchExpiration: DataTypes.STRING,
   },
   {
     sequelize,
-    modelName: "User",
+    modelName: "user",
   }
 );

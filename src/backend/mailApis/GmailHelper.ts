@@ -54,13 +54,13 @@ class GmailHelper {
     }
   }
 
-  async getMessageBody(userId: string, messageIds: string[]) {
+  async getMessageBody(messageIds: string[]) {
     //   For now just iterate since node library doesn't support batching, can add that in later
     return await Promise.all(
       messageIds.map(async (messageId) => {
         try {
           const resp = await this.gmailApi.users.messages.get({
-            userId,
+            userId: this.externalId,
             id: messageId,
           });
           const body = this.parse(resp.data.payload);
@@ -73,34 +73,36 @@ class GmailHelper {
     );
   }
 
-  async subscribeToUpdates(userId: string) {
+  async subscribeToUpdates() {
     try {
       const resp = await this.gmailApi.users.watch(
-        { userId },
+        { userId: this.externalId },
         {
           body: JSON.stringify({
             topicName: "projects/quickstart-1593887386655/topics/mail-sync",
           }),
         }
       );
-      console.log(resp);
+      return resp.data;
     } catch (err) {
       console.dir(err);
       throw err;
     }
   }
 
-  async getPartial(historyId: string) {
-    console.log("in get partial");
+  async getPartial(historyId: string): Promise<gmail_v1.Schema$Message[]> {
     const resp = await this.gmailApi.users.history.list({
       startHistoryId: historyId,
+      historyTypes: ["messagesAdded"],
       userId: this.externalId,
     });
     console.log(resp.data);
-    console.log(
-      resp.data.history[0].messages,
-      resp.data.history[0].messagesAdded
-    );
+    if (!resp.data.history) {
+      return [];
+    }
+    return resp.data.history
+      .map((hist) => hist.messagesAdded.map((mAdd) => mAdd.message))
+      .reduce((acc, arr) => acc.concat(arr), []);
   }
 
   parse(respObj: gmail_v1.Schema$MessagePart): any {

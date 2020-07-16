@@ -2,7 +2,8 @@ import { highlightAuto } from "highlight.js";
 import BaseDetector from "./BaseDetector";
 
 class CodeDetector extends BaseDetector {
-  public readonly version: number = 1;
+  public static readonly version: number = 1;
+  public static readonly scanType = "CodeDetector";
 
   public async detect(content: string) {
     console.log(content);
