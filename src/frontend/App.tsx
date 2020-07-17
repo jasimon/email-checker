@@ -13,7 +13,7 @@ export class App extends React.Component {
         <Switch>
           <Layout>
             <Layout.Header style={{ color: "#eeeeee" }}>
-              Magic 8 Ball Email Scanner
+              Welcome to Argus!
             </Layout.Header>
             <Layout.Content style={{ margin: "30px" }}>
               <Route exact path="/login">
