@@ -9,6 +9,7 @@ class Scan extends Model {
   scanType!: string;
   version!: number;
   result!: number;
+  createdAt!: Date;
   /**
    * Helper method for defining associations.
    * This method is not a part of Sequelize lifecycle.

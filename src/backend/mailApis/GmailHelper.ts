@@ -38,25 +38,25 @@ class GmailHelper {
     }
   }
 
-  async listMessages(userId: string) {
-    const messages = [];
+  async *listMessages(userId: string) {
     let nextPageToken = "";
+    console.log("listing messages");
     // NOTE: may need to make this a generator if there are too many messages to fit in memory
     try {
       do {
         const resp = await this.makeRequest(() =>
           this.gmailApi.users.messages.list({
             userId,
-            maxResults: 5,
             pageToken: nextPageToken,
           })
         );
         // When there are no messages for some reason there is no messages prop vs empty array
-        resp.data.messages && messages.push(...resp.data.messages);
+        yield resp.data.messages || [];
         nextPageToken = resp.data.nextPageToken;
+        console.log("messages total length: " + 1);
       } while (nextPageToken != null);
 
-      return messages;
+      return { done: true };
     } catch (err) {
       // TODO: handle different errors (e.g. rate limit)
       console.log(err);
@@ -125,7 +125,7 @@ class GmailHelper {
   async getPartial(historyId: string): Promise<gmail_v1.Schema$Message[]> {
     const resp = await this.gmailApi.users.history.list({
       startHistoryId: historyId,
-      historyTypes: ["messagesAdded"],
+      historyTypes: ["messageAdded"],
       userId: this.externalId,
     });
     console.log(resp.data);

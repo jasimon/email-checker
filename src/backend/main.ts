@@ -41,16 +41,20 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
-  if (req.cookies.user_sid && !req.session.user) {
-    res.clearCookie("user_sid");
+async function authEndpoint(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  if (!req.session.user) {
+    res.sendStatus(401);
   }
   next();
-});
+}
 
-app.get("/api/user/status", async function (req, res) {
-  // const { id } = req.session.user.id;
-  const id = 1;
+app.get("/api/user/status", authEndpoint, async function (req, res) {
+  console.log(req.session);
+  const { id } = req.session.user;
   const emailIds = (
     await Email.findAll({
       where: { userId: id },
@@ -61,24 +65,33 @@ app.get("/api/user/status", async function (req, res) {
     const resolvedAcc = await acc;
     const totalScans = await Scan.count({
       where: {
-        emailId: { [Op.in]: emailIds },
         scanType: Detector.scanType,
       },
+      include: [{ model: Email, where: { userId: id }, required: true }],
     });
     const failedScans = await Scan.count({
       where: {
-        emailId: { [Op.in]: emailIds },
         scanType: Detector.scanType,
         result: { [Op.gt]: 0.8 },
       },
+      include: [{ model: Email, where: { userId: id }, required: true }],
     });
     resolvedAcc[Detector.scanType] = { totalScans, failedScans };
     return Promise.resolve(resolvedAcc);
   }, Promise.resolve({}));
-  const lastScan: Date = await Scan.max("createdAt", {
-    where: { emailId: { [Op.in]: emailIds } },
-  });
-  res.set("etag", lastScan.getTime().toString());
+  // have to use a normal find method here to include the email model
+  const lastScan = (
+    await Scan.findAll({
+      order: [["createdAt", "DESC"]],
+      attributes: ["createdAt"],
+      limit: 1,
+      include: [{ model: Email, where: { userId: id }, required: true }],
+    })
+  )[0];
+  res.set(
+    "etag",
+    ((lastScan && lastScan.createdAt) || new Date()).getTime().toString()
+  );
   res.send({ ...resp, emailCount: emailIds.length });
 });
 
@@ -115,11 +128,15 @@ app.post("/api/auth", async function (req, res) {
         refreshToken: tokens.refresh_token,
       },
     });
+    console.log("adding to session");
     req.session.user = { id: user.id };
+    console.log(req.session);
     if (created) {
       // trigger initial storage
       // wait on the watch so we don't miss any emails
+      console.log("CREATED!!!!!");
       await new WatchUser().call(user.id);
+      console.log("watched!");
       new FullMailSync().call(user.id);
     }
     res.send({ id: user.id });
@@ -128,6 +145,12 @@ app.post("/api/auth", async function (req, res) {
   }
 });
 
+app.use((req, res, next) => {
+  if (req.cookies.user_sid && !req.session.user) {
+    res.clearCookie("user_sid");
+  }
+  next();
+});
 // Serve static files
 app.use("/", express.static(path.join(__dirname, "/www")));
 
