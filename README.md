@@ -13,6 +13,7 @@ A gmail scanner to protect your inbox in the event your account is compromised. 
     - Alternatively you can download and install it manually: https://classic.yarnpkg.com/en/docs/install
 - Install `redis`
     - `brew install redis`
+    - `launchctl load ~/Library/LaunchAgents/homebrew.mxcl.redis.plist`
 - Install `postgres`
     - `brew install postgres'
     - Start postgres `launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist`
