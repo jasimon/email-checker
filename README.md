@@ -1,5 +1,5 @@
-# Express React Webpack starter
-A starter Webpack 4 configuration for basic projects with Express and React.
+# Argus
+A gmail scanner to protect your inbox in the event your account is compromised.  Detects publicly accessible Google drive and dropbox links and some source code as well.
 
 
 ## Setup
