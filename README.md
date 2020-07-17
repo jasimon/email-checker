@@ -39,7 +39,7 @@ GMAIL_TOPIC_NAME=<your topic name>
 
 ### Setting up push updates
 - Download [ngrok](https://ngrok.com/download)
-- Follow the instructions [here](https://developers.google.com/gmail/api/guides/push) to set up a topic and subscription, using ngrok (`ngrok http 8080`) to get a publicly accessible url for your local server
+- Follow the instructions [here](https://developers.google.com/gmail/api/guides/push) to set up a topic and subscription, using ngrok (`ngrok http 8080`) to get a publicly accessible url as the push endpoint in the subscription
 - enter the topic name into your `.env` file
 
 ## Development
