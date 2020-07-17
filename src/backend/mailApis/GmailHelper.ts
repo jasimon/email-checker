@@ -107,7 +107,7 @@ class GmailHelper {
         { userId: this.externalId },
         {
           body: JSON.stringify({
-            topicName: "projects/quickstart-1593887386655/topics/mail-sync",
+            topicName: process.env.GMAIL_TOPIC_NAME,
           }),
         }
       );
