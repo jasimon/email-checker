@@ -67,4 +67,4 @@ NOTE: Your google redirect URI is what you specified for your callback url when 
 - Run the worker for production: `yarn worker`
 - Run multiple workers in parallel: `yarn parallelize`
 
-To run the whole project first run `yarn build`, then you'll need 3 shells, one running `yarn start`, one running `yarn build-hot-reload`, and one running `yarn parallelize`
+To run the whole project first run `yarn build`, then you'll need 3 shells, one running `yarn start`, one running `yarn build-hot-reload`, and one running `yarn parallelize`, then go to `http://localhost:8000`.
