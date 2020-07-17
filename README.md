@@ -31,11 +31,12 @@ DB_HOST=localhost
 DB_PORT=5432
 GOOGLE_CLIENT_ID=<your google client id>
 GOOGLE_CLIENT_SECRET=<your google client secret>
-GOOGLE_REDIRECT_URI=http://localhost:8000
+GOOGLE_REDIRECT_URI=<your google redirect uri>
 SESSION_SECRET=fartoolongtoreasonablyguess
 EMAIL_QUEUE_NAME=email_queue
 GMAIL_TOPIC_NAME=<your topic name>
 ```
+NOTE: Your google redirect URI is what you specified for your callback url when setting up the project.  Existing projects may have multiple urls configured.
 
 ### Setting up push updates
 - Download [ngrok](https://ngrok.com/download)
