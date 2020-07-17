@@ -1,16 +1,41 @@
 # Express React Webpack starter
 A starter Webpack 4 configuration for basic projects with Express and React.
 
-## Features
-- Build single page web apps with typescript.
 
-## Dependencies
+## Setup
+
+### Dependencies
 - Install `node`
     - Use NVM (https://github.com/nvm-sh/nvm): `nvm install lts/dubnium && nvm use lts/dubnium`
     - Alternatively you can download and install it manually: https://nodejs.org/en/download/
 - Install `yarn ^1.10.1`
     - Use brew (https://brew.sh/): `brew install yarn`
     - Alternatively you can download and install it manually: https://classic.yarnpkg.com/en/docs/install
+- Install `redis`
+    - `brew install redis`
+- Install `postgres`
+    - `brew install postgres'
+    - Start postgres `launchctl load ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist`
+    - Create the user `createuser emailadmin`
+    - Create the db `createdb -O emailadmin emaildb`
+
+### Env setup
+This projects uses `dotenv` to manage environment variables, you'll need to create one and fill in the keys with values surrounded by `< >`
+First run `touch .env` in the project root
+Paste in the file below, and complete the necessary keys:
+```
+DB_NAME=emaildb
+DB_USER=emailadmin
+DB_PASS=
+DB_HOST=localhost
+DB_PORT=5432
+GOOGLE_CLIENT_ID=<your google client id>
+GOOGLE_CLIENT_SECRET=<your google client secret>
+GOOGLE_REDIRECT_URI=http://localhost:8000
+SESSION_SECRET=fartoolongtoreasonablyguess
+EMAIL_QUEUE_NAME=email_queue
+
+```
 
 ## Development
 - Download and install VSCode: https://code.visualstudio.com/
@@ -31,7 +56,6 @@ A starter Webpack 4 configuration for basic projects with Express and React.
 - Run application (port 8080): `yarn start`
 - Run tests: `yarn test`
 - Remove all the generated files: `yarn clean`
-
-## Useful links
-- Typescript guide: https://basarat.gitbook.io/typescript/
-- VSCode custom settings: https://github.com/gianluca-venturini/env_confs/tree/master/vs_codet
+- Run the worker for development: `yarn worker:dev`
+- Run the worker for production: `yarn worker`
+- Run multiple workers in parallel: `yarn parallelize`
