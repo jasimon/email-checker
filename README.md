@@ -34,8 +34,13 @@ GOOGLE_CLIENT_SECRET=<your google client secret>
 GOOGLE_REDIRECT_URI=http://localhost:8000
 SESSION_SECRET=fartoolongtoreasonablyguess
 EMAIL_QUEUE_NAME=email_queue
-
+GMAIL_TOPIC_NAME=<your topic name>
 ```
+
+### Setting up push updates
+- Download [ngrok](https://ngrok.com/download)
+- Follow the instructions [here](https://developers.google.com/gmail/api/guides/push) to set up a topic and subscription, using ngrok (`ngrok http 8080`) to get a publicly accessible url for your local server
+- enter the topic name into your `.env` file
 
 ## Development
 - Download and install VSCode: https://code.visualstudio.com/
