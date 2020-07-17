@@ -133,20 +133,17 @@ app.post("/api/auth", async function (req, res) {
         accessTokenExpiry: new Date(tokens.expiry_date),
       },
     });
-    console.log("adding to session");
     req.session.user = { id: user.id };
-    console.log(req.session);
     if (created) {
       // trigger initial storage
       // wait on the watch so we don't miss any emails
-      console.log("CREATED!!!!!");
       await new WatchUser().call(user.id);
-      console.log("watched!");
       new FullMailSync().call(user.id);
     }
     res.send({ id: user.id });
   } catch (err) {
     console.error(err);
+    throw err;
   }
 });
 
