@@ -20,7 +20,7 @@ A starter Webpack 4 configuration for basic projects with Express and React.
     - Create the db `createdb -O emailadmin emaildb`
 
 ### Env setup
-This projects uses `dotenv` to manage environment variables, you'll need to create one and fill in the keys with values surrounded by `< >`
+This project uses `dotenv` (https://github.com/motdotla/dotenv) to manage environment variables, you'll need to create one and fill in the keys with values surrounded by `< >`
 First run `touch .env` in the project root
 Paste in the file below, and complete the necessary keys:
 ```
