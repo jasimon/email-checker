@@ -11,27 +11,27 @@ class ScanEmails {
     const emails = await Email.findAll({
       where: { id: { [Op.in]: emailIds } },
     });
-    console.log(emailIds);
-    console.log(emails);
     const user = await User.findByPk(userId);
     const helper = new GmailHelper(
       user.accessToken,
       user.refreshToken,
       user.externalId
     );
-    await Promise.all(
+    return await Promise.all(
       emails.map(async (email) => {
         const [content] = await helper.getMessageBody([email.externalId]);
-        detectors.forEach(async (Detector) => {
-          const result = await new Detector().detect(content);
-          await Scan.create({
-            scanType: Detector.scanType,
-            version: Detector.version,
-            result,
-            emailId: email.id,
-          });
-          return result;
-        });
+        return await Promise.all(
+          detectors.map(async (Detector) => {
+            const result = await new Detector().detect(content);
+            await Scan.create({
+              scanType: Detector.scanType,
+              version: Detector.version,
+              result,
+              emailId: email.id,
+            });
+            return result;
+          })
+        );
       })
     );
   }

@@ -1,0 +1,7 @@
+@import "~antd/dist/antd.css";
+
+.stats-card {
+    width: 20%;
+    display: inline-block;
+    margin-right: 15px;
+}

@@ -3,18 +3,27 @@ import { render } from "react-dom";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 import LoginRoute from "./routes/LoginRoute";
 import DashboardRoute from "./routes/DashboardRoute";
+import "./App.css";
+import { Layout } from "antd";
 
 export class App extends React.Component {
   render() {
     return (
       <Router>
         <Switch>
-          <Route exact path="/login">
-            <LoginRoute />
-          </Route>
-          <Route exact path="/">
-            <DashboardRoute />
-          </Route>
+          <Layout>
+            <Layout.Header style={{ color: "#eeeeee" }}>
+              Magic 8 Ball Email Scanner
+            </Layout.Header>
+            <Layout.Content style={{ margin: "30px" }}>
+              <Route exact path="/login">
+                <LoginRoute />
+              </Route>
+              <Route exact path="/">
+                <DashboardRoute />
+              </Route>
+            </Layout.Content>
+          </Layout>
         </Switch>
       </Router>
     );

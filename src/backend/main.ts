@@ -13,10 +13,14 @@ import Scan from "./models/scan";
 import { Op } from "sequelize";
 import { ALL_DETECTORS } from "./detectors";
 import WatchUser from "./services/watchUser";
+import Queue from "bull";
+import { setQueues, UI } from "bull-board";
 
 dotenv.config();
 
 var app = express();
+const emailQueue = new Queue(process.env.EMAIL_QUEUE_NAME);
+setQueues([emailQueue]);
 
 GmailHelper.init(
   process.env.GOOGLE_CLIENT_ID,
@@ -61,24 +65,24 @@ app.get("/api/user/status", authEndpoint, async function (req, res) {
       attributes: ["id"],
     })
   ).map((email) => email.id);
-  const resp = await ALL_DETECTORS.reduce(async (acc, Detector) => {
-    const resolvedAcc = await acc;
-    const totalScans = await Scan.count({
-      where: {
-        scanType: Detector.scanType,
-      },
-      include: [{ model: Email, where: { userId: id }, required: true }],
-    });
-    const failedScans = await Scan.count({
-      where: {
-        scanType: Detector.scanType,
-        result: { [Op.gt]: 0.8 },
-      },
-      include: [{ model: Email, where: { userId: id }, required: true }],
-    });
-    resolvedAcc[Detector.scanType] = { totalScans, failedScans };
-    return Promise.resolve(resolvedAcc);
-  }, Promise.resolve({}));
+  const scanMetrics = await Promise.all(
+    ALL_DETECTORS.map(async (Detector) => {
+      const totalScans = await Scan.count({
+        where: {
+          scanType: Detector.scanType,
+        },
+        include: [{ model: Email, where: { userId: id }, required: true }],
+      });
+      const failedScans = await Scan.count({
+        where: {
+          scanType: Detector.scanType,
+          result: { [Op.gt]: 0.8 },
+        },
+        include: [{ model: Email, where: { userId: id }, required: true }],
+      });
+      return { totalScans, failedScans, type: Detector.scanType };
+    })
+  );
   // have to use a normal find method here to include the email model
   const lastScan = (
     await Scan.findAll({
@@ -92,7 +96,7 @@ app.get("/api/user/status", authEndpoint, async function (req, res) {
     "etag",
     ((lastScan && lastScan.createdAt) || new Date()).getTime().toString()
   );
-  res.send({ ...resp, emailCount: emailIds.length });
+  res.send({ scanMetrics, emailCount: emailIds.length });
 });
 
 app.post("/webhooks/gmail_messages", async function (req, res) {
@@ -126,6 +130,7 @@ app.post("/api/auth", async function (req, res) {
         externalId: sub,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
+        accessTokenExpiry: new Date(tokens.expiry_date),
       },
     });
     console.log("adding to session");
@@ -145,6 +150,7 @@ app.post("/api/auth", async function (req, res) {
   }
 });
 
+app.use("/admin/queues", UI);
 app.use((req, res, next) => {
   if (req.cookies.user_sid && !req.session.user) {
     res.clearCookie("user_sid");

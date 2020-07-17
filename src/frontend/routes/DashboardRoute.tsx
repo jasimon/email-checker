@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Redirect } from "react-router-dom";
+import { Statistic, Card } from "antd";
 
 const UNAUTHORIZED = "unauthorized";
 const GENERIC_ERROR = "generic_error";
 
 const DashboardRoute = () => {
-  const [summaryMetrics, setSummaryMetrics] = useState({});
+  const [summaryMetrics, setSummaryMetrics] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
     const api = async () => {
@@ -23,7 +24,7 @@ const DashboardRoute = () => {
         }
       }
     };
-    const intervalId = setInterval(api, 1000);
+    const intervalId = setInterval(api, 2000);
     return () => clearInterval(intervalId);
   }, []);
   if (error === UNAUTHORIZED) {
@@ -31,9 +32,37 @@ const DashboardRoute = () => {
   }
   return (
     <div>
-      Logged in!
-      {JSON.stringify(summaryMetrics)}
-      {error && <span>An error has occurred</span>}
+      {summaryMetrics && (
+        <div>
+          <h2>Summary Statistics</h2>
+          <Card className="stats-card">
+            <Statistic
+              title="Emails Pulled"
+              value={summaryMetrics.emailCount}
+            />
+          </Card>
+          {summaryMetrics.scanMetrics.map(
+            ({
+              failedScans,
+              totalScans,
+              type,
+            }: {
+              failedScans: number;
+              totalScans: number;
+              type: string;
+            }) => (
+              <Card className="stats-card">
+                <Statistic
+                  title={type}
+                  value={failedScans}
+                  suffix={`/ ${totalScans || 0}`}
+                />
+              </Card>
+            )
+          )}
+        </div>
+      )}
+      {error && <span>An error has occurred</span>}{" "}
     </div>
   );
 };

@@ -5,11 +5,14 @@
   "author": "Gianluca Venturini <gianluca@stellarite.io>",
   "license": "MIT",
   "scripts": {
-    "build": "PROJECTS=frontend,backend webpack --progress --colors",
+    "build": "PROJECTS=frontend,backend,worker webpack --progress --colors",
     "test": "PROJECTS=test webpack --progress --colors && node --inspect ./node_modules/jasmine/bin/jasmine.js dist/test.js",
-    "build-watch": "PROJECTS=frontend,backend WATCH=true webpack --progress --colors",
+    "build-watch": "PROJECTS=backend,worker WATCH=true webpack --progress --colors",
     "start": "node --inspect dist/server.js",
     "dev": "nodemon dist/server.js",
+    "worker:dev": "nodemon dist/worker.js",
+    "worker": "node dist/worker.js",
+    "parallelize": "npm-run-all -p worker worker worker worker worker worker worker worker worker worker",
     "build-hot-reload": "PROJECTS=frontend webpack-dev-server --mode=development",
     "clean": "rm -rf node_modules/ dist/"
   },
@@ -18,6 +21,8 @@
     "node": ">=10.18.0"
   },
   "devDependencies": {
+    "@types/bull": "^3.14.0",
+    "@types/bull-board": "^0.6.0",
     "@types/content-type": "^1.1.3",
     "@types/cookie-parser": "^1.4.2",
     "@types/express": "^4.17.6",
@@ -28,6 +33,7 @@
     "@types/react-dom": "^16.9.8",
     "@types/react-router-dom": "^5.1.5",
     "@types/webpack-env": "^1.15.2",
+    "css-loader": "^3.6.0",
     "html-webpack-plugin": "^3.2.0",
     "jasmine": "^3.5.0",
     "node-fetch": "^2.6.0",
@@ -36,6 +42,7 @@
     "react-dom": "^16.13.1",
     "sequelize-cli": "^6.2.0",
     "source-map-support": "^0.5.19",
+    "style-loader": "^1.2.1",
     "ts-loader": "^6.2.1",
     "typescript": "^3.7.4",
     "webpack": "^4.43.0",
@@ -44,8 +51,11 @@
     "webpack-node-externals": "^1.7.2"
   },
   "dependencies": {
+    "antd": "^4.4.2",
     "axios": "^0.19.2",
     "body-parser": "^1.19.0",
+    "bull": "^3.16.0",
+    "bull-board": "^0.9.0",
     "content-type": "^1.0.4",
     "cookie-parser": "^1.4.5",
     "dotenv": "^8.2.0",
@@ -53,6 +63,7 @@
     "express-session": "^1.17.1",
     "googleapis": "39",
     "highlight.js": "^10.1.1",
+    "npm-run-all": "^4.1.5",
     "pg": "^8.3.0",
     "pg-hstore": "^2.3.3",
     "react-google-login": "^5.1.20",

@@ -24,23 +24,21 @@ class GmailHelper {
       refresh_token: refreshToken,
     });
 
-    this.refreshAccessToken();
     this.gmailApi = google.gmail({ version: "v1", auth });
   }
 
   async refreshAccessToken() {
     // TODO: save this back to the user, only do when the token is expired
     try {
-      await auth.getAccessToken();
+      return await auth.getAccessToken();
     } catch (err) {
-      // swallow for now
       console.error(err);
+      throw err;
     }
   }
 
   async *listMessages(userId: string) {
     let nextPageToken = "";
-    console.log("listing messages");
     // NOTE: may need to make this a generator if there are too many messages to fit in memory
     try {
       do {
@@ -53,7 +51,6 @@ class GmailHelper {
         // When there are no messages for some reason there is no messages prop vs empty array
         yield resp.data.messages || [];
         nextPageToken = resp.data.nextPageToken;
-        console.log("messages total length: " + 1);
       } while (nextPageToken != null);
 
       return { done: true };
@@ -89,17 +86,16 @@ class GmailHelper {
     return await Promise.all(
       messageIds.map(async (messageId) => {
         try {
-          const resp = await this.makeRequest(() =>
-            this.gmailApi.users.messages.get({
-              userId: this.externalId,
-              id: messageId,
-            })
-          );
+          // for now bubble this error since we're handling one by one and let job queue do backoff
+          const resp = await this.gmailApi.users.messages.get({
+            userId: this.externalId,
+            id: messageId,
+          });
           const body = this.parse(resp.data.payload);
           return body;
         } catch (err) {
           console.log(err);
-          return err;
+          throw err;
         }
       })
     );
@@ -140,7 +136,6 @@ class GmailHelper {
   parse(respObj: gmail_v1.Schema$MessagePart): any {
     // console.log(respObj.body && respObj.body.size);
     const contentType = this.getContentType(respObj.headers);
-    console.log(contentType);
     if (respObj.parts) {
       return respObj.parts.map(this.parse, this).join("\n");
     } else if (contentType.type === "text/plain" && respObj.body.data) {
@@ -151,9 +146,12 @@ class GmailHelper {
   }
 
   private getContentType(headers: gmail_v1.Schema$MessagePartHeader[]) {
-    return contentType.parse(
-      headers.find((header) => header.name === "Content-Type").value
+    const contentTypeHeader = headers.find(
+      (header) => header.name === "Content-Type"
     );
+    return contentTypeHeader
+      ? contentType.parse(contentTypeHeader.value)
+      : { type: "" };
   }
 
   async getAttachments(userId: string, messageIds: string[]) {

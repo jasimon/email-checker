@@ -2,10 +2,13 @@ import User from "../models/user";
 import GmailHelper from "../mailApis/GmailHelper";
 import ScanEmails from "./ScanEmails";
 import { createEmailsFromGmail } from "./helpers";
+import RefreshUserAccessToken from "./RefreshAccessToken";
 
 class PartialMailSync {
   async call(email: string, newHistoryId: string) {
-    const user = await User.findOne({ where: { email } });
+    const { id } = await User.findOne({ where: { email } });
+    const user = await new RefreshUserAccessToken().call(id);
+    user.reload();
     const helper = new GmailHelper(
       user.accessToken,
       user.refreshToken,

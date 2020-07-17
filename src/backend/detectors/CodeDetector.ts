@@ -6,7 +6,6 @@ class CodeDetector extends BaseDetector {
   public static readonly scanType = "CodeDetector";
 
   public async detect(content: string) {
-    console.log(content);
     const { language, relevance } = highlightAuto(content);
     console.log(
       language,
@@ -15,7 +14,7 @@ class CodeDetector extends BaseDetector {
       relevance / content.length
     );
     // based on some very hand wavy calculations
-    return relevance / content.length;
+    return content.length > 0 ? relevance / content.length: content.length;
   }
 }
 

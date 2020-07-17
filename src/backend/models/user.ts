@@ -11,6 +11,7 @@ export default class User extends Model {
   refreshToken!: string;
   lastHistoryId: string;
   watchExpiration: string;
+  accessTokenExpiry: Date;
 
   /**
    * Helper method for defining associations.
@@ -31,6 +32,7 @@ User.init(
     refreshToken: { type: DataTypes.STRING, allowNull: false },
     lastHistoryId: DataTypes.STRING,
     watchExpiration: DataTypes.STRING,
+    accessTokenExpiry: DataTypes.DATE,
   },
   {
     sequelize,
