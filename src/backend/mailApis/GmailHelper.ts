@@ -178,8 +178,6 @@ class GmailHelper {
       "base64"
     ).toString();
   }
-
-  // TODO: watch endpoint
 }
 
 export default GmailHelper;
